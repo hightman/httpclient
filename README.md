@@ -1,16 +1,16 @@
 A parallel HTTP client written in pure PHP
 ==========================================
 
-This is a strong HTTP client written in pure PHP code, no need any other
-PHP extension. It help you easy to send HTTP request and handle response.
+This is a powerful HTTP client written in pure PHP code, dose not require any other
+PHP extension. It help you easy to send HTTP request and handle its response.
 
-- Process multiple requests in parallel mode
+- Process multiple requests in parallel
 - Full support for HTTP methods, including GET, POST, HEAD, ...
 - Customizable HTTP headers, full support for Cookie, X-Server-Ip
 - Follows 301/302 redirect, can set the maximum times
 - Supports Keep-Alive, reuse connection to the same host
 - Supports HTTPS with openssl
-- Allowed to upload file via POST method
+- Allow to upload file via POST method
 - Detailed information in DEBUG mode
 - Free and open source, release under MIT license
 
@@ -26,9 +26,8 @@ Install
 
 ### Install from an Archive File
 
-Extract the archive file downloaded from [github/master.zip](https://github.com/hightman/httpclient/archive/master.zip) to
-
-your project. And then add the library files into your program:
+Extract the archive file downloaded from [httpclient-master.zip](https://github.com/hightman/httpclient/archive/master.zip)
+to your project. And then add the library file into your program:
 
 ```php
 require '/path/to/httpclient.inc.php';
@@ -52,7 +51,7 @@ Usage
 ### Quick to use
 
 
-We have defined some shortcut methods, it can be used as following:
+We have defined some shortcut methods, they can be used as following:
 
 ```php
 use hightman\http\Client;
@@ -93,7 +92,7 @@ $data = $http->postJson('http://www.your.host/reqeust/uri', ['key1' => 'value1',
 
 ### Customize request
 
-You can customize various requests by passing `Request` object.
+You can also customize various requests by passing in `Request` object.
 
 ```php
 use hightman\http\Client;
@@ -129,9 +128,9 @@ print_r($response);
 ```
 
 
-### Multiple get in parallel mode
+### Multiple get in parallel
 
-A great features of this library is that we can execute multiple requests in parallel mode.
+A great features of this library is that we can execute multiple requests in parallel.
 For example, executed three requests simultaneously, the total time spent is one of the longest,
 rather than their sum.
 
@@ -177,10 +176,9 @@ $results = $http->mget([
 
 ```
 
-> Note: we also other methods like: mhead, mpost, mput ...
+> Note: There are other methods like: mhead, mpost, mput ...
 > If you need handle multiple different requests, you can pass an array of `Request`
 > objects into `Client::exec($reqs)`.
-
 
 
 ### Export and reused cookies
@@ -202,7 +200,7 @@ $request->setHeader('authorization', 'Bearer ' . $token);
 ```
 
 
-### Enable debugmode
+### Enable debug mode
 
 You can turn on debug mode via `Client::debug('open')`.
 This will display many debug messages to help you find out problem.
@@ -210,8 +208,8 @@ This will display many debug messages to help you find out problem.
 
 ### Others
 
-Because of `Client` class also use `HeaderTrait`, you can use `Client::setHeader()`
-specify global HTTP headers for requests handled by this client object.
+Because of `Client` class also `use HeaderTrait`, you can use `Client::setHeader()`
+to specify global HTTP headers for requests handled by this client object.
 
 
 Contact me
