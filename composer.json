@@ -1,0 +1,28 @@
+{
+    "name": "hightman/httpclient",
+    "description": "A parallel HTTP client written in pure PHP",
+    "keywords": ["http client", "curl", "php", "rest"],
+    "homepage": "http://hightman.cn/",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "hightman",
+            "email": "hightman@twomice.net",
+            "homoepage": "http://hightman.cn/"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "hightman\\http\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.1-dev"
+        }
+    }
+}
