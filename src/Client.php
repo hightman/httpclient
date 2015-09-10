@@ -137,6 +137,9 @@ class Client
      */
     public function head($url, $params = [])
     {
+        if (is_array($url)) {
+            return $this->mhead($url, $params);
+        }
         return $this->exec($this->buildRequest('HEAD', $url, $params));
     }
 
@@ -159,6 +162,9 @@ class Client
      */
     public function get($url, $params = [])
     {
+        if (is_array($url)) {
+            return $this->mget($url, $params);
+        }
         return $this->exec($this->buildRequest('GET', $url, $params));
     }
 
@@ -181,6 +187,9 @@ class Client
      */
     public function delete($url, $params = [])
     {
+        if (is_array($url)) {
+            return $this->mdelete($url, $params);
+        }
         return $this->exec($this->buildRequest('DELETE', $url, $params));
     }
 

@@ -9,7 +9,6 @@
 
 namespace hightman\http;
 
-
 /**
  * Interface for classes that parse the HTTP response.
  *
