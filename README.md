@@ -31,7 +31,7 @@ Extract the archive file downloaded from [github/master.zip](https://github.com/
 your project. And then add the library files into your program:
 
 ```php
-require '/path/to/httpclient-dist.php';
+require '/path/to/httpclient.inc.php';
 ```
 
 ### Install via Composer
