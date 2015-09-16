@@ -18,7 +18,7 @@ namespace hightman\http;
 class Client
 {
     use HeaderTrait;
-    const PACKAGE = __NAMESPACE__ . '\Client';
+	const PACKAGE = __CLASS__;
     const VERSION = '1.0.0-beta';
     const CRLF = "\r\n";
 
@@ -36,7 +36,7 @@ class Client
             self::$_debugOpen = $msg === 'open';
         } elseif (self::$_debugOpen === true) {
             $key = self::$_processKey === null ? '' : '[' . self::$_processKey . '] ';
-            echo '[DEBUG] ' . date('H:i:s') . ' ' . $key . implode('', func_get_args()) . self::CRLF;
+            echo '[DEBUG] ', date('H:i:s '), $key, implode('', func_get_args()), self::CRLF;
         }
     }
 
