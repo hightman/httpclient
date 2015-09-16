@@ -168,6 +168,8 @@ class Processor
                 $req->clearCookie();
                 $req->setHeader('host', null);
                 $req->setHeader('x-server-ip', null);
+                $req->setHeader('content-type', null);
+                $req->setBody(null);
                 // reset response
                 $this->res->numRedirected++;
                 $this->finished = $this->headerOk = false;

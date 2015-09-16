@@ -160,6 +160,7 @@ class Connection
         if ($n === 0 && $this->ioEmptyError()) {
             $n = false;
         }
+        $this->ioFlagReset();
         return $n;
     }
 

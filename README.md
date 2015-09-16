@@ -68,7 +68,7 @@ print_r($res->getHeader('content-type'));
 print_r($res->getCookie(null));
 
 // 3. post request
-$res = $http->post('http://www.your.host/', ['field1' => 'value1', ['field2' => 'value2']);
+$res = $http->post('http://www.your.host/', ['field1' => 'value1', 'field2' => 'value2']);
 if (!$res->hasError()) {
    echo $res->body;    // response content
    echo $res->status;  // response status code
@@ -122,7 +122,7 @@ $request->setBody('request body ...');
 $request->setJsonBody(['key' => 'value']);
 
 // execute the request
-$response = $http->execute($request);
+$response = $http->exec($request);
 print_r($response);
 
 ```
