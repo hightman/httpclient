@@ -18,11 +18,6 @@ namespace hightman\http;
 class Connection
 {
     /**
-     * The maximum number of concurrent connections for the same host and port pair.
-     */
-    const MAX_BURST = 3;
-
-    /**
      * The connection socket flags
      */
     const FLAG_NEW = 0x01;
@@ -57,7 +52,7 @@ class Connection
                 break;
             }
         }
-        if ($obj === null && count(self::$_objs[$conn]) < self::MAX_BURST) {
+        if ($obj === null && count(self::$_objs[$conn]) < Client::$maxBurst) {
             $obj = new self($conn);
             self::$_objs[$conn][] = $obj;
             Client::debug('create conn \'', $conn, '\'');

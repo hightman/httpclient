@@ -18,9 +18,14 @@ namespace hightman\http;
 class Client
 {
     use HeaderTrait;
-	const PACKAGE = __CLASS__;
+    const PACKAGE = __CLASS__;
     const VERSION = '1.0.0-beta';
     const CRLF = "\r\n";
+
+    /**
+     * @var int the maximum number of concurrent connections for same host and port pair.
+     */
+    public static $maxBurst = 3;
 
     private $_cookiePath, $_parser, $_timeout;
     private static $_debugOpen = false;
