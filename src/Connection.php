@@ -228,7 +228,8 @@ class Connection
             $this->flag |= self::FLAG_NEW2;
         }
         // async-connect
-        $this->sock = stream_socket_client($this->conn, $errno, $error, 1, STREAM_CLIENT_ASYNC_CONNECT);
+        $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        $this->sock = stream_socket_client($this->conn, $errno, $error, 1, STREAM_CLIENT_ASYNC_CONNECT, $ctx);
         if ($this->sock === false) {
             Client::debug($repeat ? 're' : '', 'open \'', $this->conn, '\' failed: ', $error);
             self::$_lastError = $error;
