@@ -105,7 +105,13 @@ class Processor
 
     public function recv()
     {
-        return $this->headerOk ? $this->readBody() : $this->readHeader();
+        if ($this->conn->proxyState !== 0) {
+            if ($this->conn->proxyRead() === false) {
+                $this->finish('BROKEN');
+            }
+        } else {
+            return $this->headerOk ? $this->readBody() : $this->readHeader();
+        }
     }
 
     /**

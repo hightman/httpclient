@@ -199,6 +199,14 @@ $http->setHeader('authorization', 'Bearer ' . $token);
 $request->setHeader('authorization', 'Bearer ' . $token);
 ```
 
+### Use socks5 proxy
+
+```php
+Connection::useSocks5('127.0.0.1', 1080); // or with username & password
+Connection::useSocks5('127.0.0.1', 1080, 'guest', 'guest'); // or disable it
+Connection::useSocks5(null);
+```
+
 
 ### Enable debug mode
 
