@@ -189,7 +189,7 @@ class Connection
             }
             return $len;
         }
-        $n = fwrite($this->sock, $buf);
+        $n = @fwrite($this->sock, $buf);
         if ($n === 0 && $this->ioEmptyError()) {
             $n = false;
         }
@@ -203,7 +203,7 @@ class Connection
      */
     public function getLine()
     {
-        $line = stream_get_line($this->sock, 2048, "\n");
+        $line = @stream_get_line($this->sock, 2048, "\n");
         if ($line === '' || $line === false) {
             $line = $this->ioEmptyError() ? false : null;
         } else {
@@ -220,7 +220,7 @@ class Connection
      */
     public function read($size = 8192)
     {
-        $buf = fread($this->sock, $size);
+        $buf = @fread($this->sock, $size);
         if ($buf === '' || $buf === false) {
             $buf = $this->ioEmptyError() ? false : null;
         }
@@ -331,7 +331,7 @@ class Connection
             $conn = $this->conn;
         }
         $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-        $this->sock = stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, $ctx);
+        $this->sock = @stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, $ctx);
         if ($this->sock === false) {
             Client::debug($repeat ? 're' : '', 'open \'', $conn, '\' failed: ', $error);
             self::$_lastError = $error;
