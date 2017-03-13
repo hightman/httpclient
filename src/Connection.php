@@ -331,7 +331,7 @@ class Connection
             $conn = $this->conn;
         }
         $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-        $this->sock = stream_socket_client($conn, $errno, $error, 1, STREAM_CLIENT_ASYNC_CONNECT, $ctx);
+        $this->sock = stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, $ctx);
         if ($this->sock === false) {
             Client::debug($repeat ? 're' : '', 'open \'', $conn, '\' failed: ', $error);
             self::$_lastError = $error;
