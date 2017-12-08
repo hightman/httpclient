@@ -25,15 +25,18 @@ trait HeaderTrait
      * Set http header or headers
      * @param mixed $key string key or key-value pairs to set multiple headers.
      * @param string $value the header value when key is string, set null to remove header.
+     * @param boolean $toLower convert key to lowercase
      */
-    public function setHeader($key, $value = null)
+    public function setHeader($key, $value = null, $toLower = true)
     {
         if (is_array($key)) {
             foreach ($key as $k => $v) {
                 $this->setHeader($k, $v);
             }
         } else {
-            $key = strtolower($key);
+            if ($toLower === true) {
+                $key = strtolower($key);
+            }
             if ($value === null) {
                 unset($this->_headers[$key]);
             } else {
@@ -46,8 +49,9 @@ trait HeaderTrait
      * Add http header or headers
      * @param mixed $key string key or key-value pairs to be added.
      * @param string $value the header value when key is string.
+     * @param boolean $toLower convert key to lowercase
      */
-    public function addHeader($key, $value = null)
+    public function addHeader($key, $value = null, $toLower = true)
     {
         if (is_array($key)) {
             foreach ($key as $k => $v) {
@@ -55,7 +59,9 @@ trait HeaderTrait
             }
         } else {
             if ($value !== null) {
-                $key = strtolower($key);
+                if ($toLower === true) {
+                    $key = strtolower($key);
+                }
                 if (!isset($this->_headers[$key])) {
                     $this->_headers[$key] = $value;
                 } else {
@@ -80,25 +86,32 @@ trait HeaderTrait
     /**
      * Get a http header or all http headers
      * @param mixed $key the header key to be got, or null to get all headers
+     * @param boolean $toLower convert key to lowercase
      * @return array|string the header value, or headers array when key is null.
      */
-    public function getHeader($key = null)
+    public function getHeader($key = null, $toLower = true)
     {
         if ($key === null) {
             return $this->_headers;
         }
-        $key = strtolower($key);
+        if ($toLower === true) {
+            $key = strtolower($key);
+        }
         return isset($this->_headers[$key]) ? $this->_headers[$key] : null;
     }
 
     /**
      * Check HTTP header is set or not
      * @param string $key the header key to be check, not case sensitive
+     * @param boolean $toLower convert key to lowercase
      * @return boolean if there is http header with the name.
      */
-    public function hasHeader($key)
+    public function hasHeader($key, $toLower = true)
     {
-        return isset($this->_headers[strtolower($key)]);
+        if ($toLower === true) {
+            $key = strtolower($key);
+        }
+        return isset($this->_headers[$key]);
     }
 
     /**

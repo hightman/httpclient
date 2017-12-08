@@ -90,6 +90,7 @@ class Connection
             Client::debug('create conn \'', $conn, '\'');
         }
         if ($obj !== null) {
+            $obj->arg = $arg;
             if ($obj->flag & self::FLAG_OPENED) {
                 $obj->flag |= self::FLAG_REUSED;
             } else {
@@ -100,7 +101,6 @@ class Connection
             $obj->flag |= self::FLAG_BUSY;
             $obj->outBuf = null;
             $obj->outLen = 0;
-            $obj->arg = $arg;
         }
         return $obj;
     }
@@ -323,15 +323,18 @@ class Connection
             $this->flag |= self::FLAG_NEW2;
         }
         // async-connect
+        $ctx = ['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]];
         if (isset(self::$_socks5['conn'])) {
             $this->proxyState = 1;
             $conn = self::$_socks5['conn'];
         } else {
             $this->proxyState = 0;
             $conn = $this->conn;
+            if (!strncmp($conn, 'ssl:', 4) && $this->arg instanceof Processor) {
+                $ctx['ssl']['peer_name'] = $this->arg->req->getUrlParam('host');
+            }
         }
-        $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-        $this->sock = @stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, $ctx);
+        $this->sock = @stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, stream_context_create($ctx));
         if ($this->sock === false) {
             Client::debug($repeat ? 're' : '', 'open \'', $conn, '\' failed: ', $error);
             self::$_lastError = $error;
