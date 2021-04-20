@@ -130,7 +130,7 @@ class Client
      */
     public function clearHeader()
     {
-        parent::clearHeader();
+        $this->_headers = [];
         $this->applyDefaultHeader();
     }
 
