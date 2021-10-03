@@ -121,6 +121,11 @@ $request->setBody('request body ...');
 // this will set content-type header to 'application/json' automatically.
 $request->setJsonBody(['key' => 'value']);
 
+// specify context options of connect, such as SSL options
+$request->contextOptions = [
+    'ssl' => ['verify_peer_name' => false, 'local_cert' => '/path/to/file.pem'],
+];
+
 // execute the request
 $response = $http->exec($request);
 print_r($response);

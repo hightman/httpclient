@@ -38,6 +38,11 @@ class Connection
      */
     public $proxyState = 0;
 
+    /**
+     * @var array|null client context options
+     */
+    public $contextOptions = null;
+
     protected $outBuf, $outLen;
     protected $arg, $sock, $conn, $flag = 0;
     private static $_objs = [];
@@ -86,6 +91,9 @@ class Connection
         }
         if ($obj === null && count(self::$_objs[$conn]) < Client::$maxBurst) {
             $obj = new self($conn);
+            if ($arg instanceof Processor) {
+                $obj->contextOptions = $arg->req->contextOptions;
+            }
             self::$_objs[$conn][] = $obj;
             Client::debug('create conn \'', $conn, '\'');
         }
@@ -324,7 +332,7 @@ class Connection
         }
         // async-connect
         $ctx = ['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]];
-        if (isset(self::$_socks5['conn'])) {
+        if (isset(self::$_socks5['conn']) && $this->contextOptions === null) {
             $this->proxyState = 1;
             $conn = self::$_socks5['conn'];
         } else {
@@ -332,6 +340,15 @@ class Connection
             $conn = $this->conn;
             if (!strncmp($conn, 'ssl:', 4) && $this->arg instanceof Processor) {
                 $ctx['ssl']['peer_name'] = $this->arg->req->getUrlParam('host');
+            }
+        }
+        if (is_array($this->contextOptions)) {
+            foreach ($this->contextOptions as $key => $value) {
+                if (isset($ctx[$key])) {
+                    $ctx[$key] = array_merge($ctx[$key], $value);
+                } else {
+                    $ctx[$key] = $value;
+                }
             }
         }
         $this->sock = @stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, stream_context_create($ctx));

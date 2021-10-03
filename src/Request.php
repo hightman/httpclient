@@ -18,6 +18,13 @@ namespace hightman\http;
 class Request
 {
     use HeaderTrait;
+
+    /**
+     * @var array context options of client connection
+     * @see https://www.php.net/manual/en/context.php
+     */
+    public $contextOptions;
+
     private $_url, $_urlParams, $_rawUrl, $_body;
     private $_method = 'GET';
     private $_maxRedirect = 5;
