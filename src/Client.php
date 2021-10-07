@@ -19,13 +19,13 @@ class Client
 {
     use HeaderTrait;
     const PACKAGE = __CLASS__;
-    const VERSION = '1.0.0-beta';
+    const VERSION = '1.x-beta';
     const CRLF = "\r\n";
 
     /**
      * @var int the maximum number of concurrent connections for same host and port pair.
      */
-    public static $maxBurst = 3;
+    public static $maxBurst = 10;
 
     private $_cookiePath, $_parser, $_timeout;
     private static $_debugOpen = false;
