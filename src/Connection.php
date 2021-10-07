@@ -286,7 +286,7 @@ class Connection
                 if (!strncmp('HTTP/', $line, 5)) {
                     $line = trim(substr($line, strpos($line, ' ')));
                     if (intval($line) !== 200) {
-                        self::$_lastError = 'Proxy communication error: ' . $line;
+                        self::$_lastError = 'Proxy response error: ' . $line;
                         return false;
                     }
                 }
@@ -319,7 +319,7 @@ class Connection
             }
         }
         if ($proxyState === $this->proxyState) {
-            self::$_lastError = 'Proxy read error: state=' . $proxyState;
+            self::$_lastError = 'Proxy response error: state=' . $proxyState;
             if (isset($buf)) {
                 $unpack = unpack('H*', $buf);
                 self::$_lastError .= ', buf=' . $unpack[1];
@@ -329,7 +329,7 @@ class Connection
             if ($this->proxyState === 0 && !strncmp($this->conn, 'ssl:', 4)) {
                 Client::debug('enable crypto via proxy tunnel');
                 if ($this->enableCrypto() !== true) {
-                    self::$_lastError = 'Failed to enable crypto in proxy tunnel';
+                    self::$_lastError = 'Enable crypto error: ' . self::lastPhpError();
                     return false;
                 }
             }
@@ -355,6 +355,9 @@ class Connection
                 $buf .= Client::CRLF;
                 $this->proxyState++;
                 return $this->write($buf);
+            } else {
+                // wait other response lines
+                $this->proxyState++;
             }
         } elseif (self::$_proxy['scheme'] === 'socks4') {
             if ($this->proxyState === 1) {
@@ -445,6 +448,9 @@ class Connection
         $conn = $useProxy ? 'tcp://' . self::$_proxy['host'] . ':' . self::$_proxy['port'] : $this->conn;
         $this->sock = @stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, stream_context_create($ctx));
         if ($this->sock === false) {
+            if (empty($error)) {
+                $error = self::lastPhpError();
+            }
             Client::debug($repeat ? 're' : '', 'open \'', $conn, '\' failed: ', $error);
             self::$_lastError = $error;
         } else {
@@ -469,7 +475,8 @@ class Connection
                 }
             }
             if (!($this->flag & self::FLAG_REUSED) || !$this->openSock(true)) {
-                self::$_lastError = ($this->flag & self::FLAG_NEW) ? 'Fail to connect' : 'Reset by peer';
+                self::$_lastError = ($this->flag & self::FLAG_NEW) ? 'Unable to connect' : 'Stream read error';
+                self::$_lastError .= ': ' . self::lastPhpError();
                 return true;
             }
         }
@@ -523,5 +530,11 @@ class Connection
         $res = @stream_socket_enable_crypto($this->sock, $enable, $method);
         stream_set_blocking($this->sock, false);
         return $res === true;
+    }
+
+    private static function lastPhpError()
+    {
+        $error = error_get_last();
+        return ($error !== null && isset($error['message'])) ? $error['message'] : null;
     }
 }
