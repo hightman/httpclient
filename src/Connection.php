@@ -432,6 +432,9 @@ class Connection
             if ($req->disableProxy === true) {
                 $useProxy = false;
             }
+            if (!strncmp($this->conn, 'ssl:', 4)) {
+                $ctx['ssl']['peer_name'] = $req->getUrlParam('host');
+            }
             if (is_array($req->contextOptions)) {
                 foreach ($req->contextOptions as $key => $value) {
                     if (isset($ctx[$key])) {
@@ -440,9 +443,6 @@ class Connection
                         $ctx[$key] = $value;
                     }
                 }
-            }
-            if (!strncmp($this->conn, 'ssl:', 4)) {
-                $ctx['ssl']['peer_name'] = $req->getUrlParam('host');
             }
         }
         $conn = $useProxy ? 'tcp://' . self::$_proxy['host'] . ':' . self::$_proxy['port'] : $this->conn;
