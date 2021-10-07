@@ -340,16 +340,6 @@ class Client
                 trigger_error('stream_select() error', E_USER_WARNING);
                 break;
             } elseif ($num > 0) {
-                // wfds
-                foreach ($wfds as $sock) {
-                    if (!($conn = Connection::findBySock($sock))) {
-                        continue;
-                    }
-                    $rec = $conn->getExArg();
-                    /* @var $rec Processor */
-                    self::$_processKey = $rec->key;
-                    $rec->send();
-                }
                 // rfds
                 foreach ($rfds as $sock) {
                     if (!($conn = Connection::findBySock($sock))) {
@@ -359,6 +349,16 @@ class Client
                     /* @var $rec Processor */
                     self::$_processKey = $rec->key;
                     $rec->recv();
+                }
+                // wfds
+                foreach ($wfds as $sock) {
+                    if (!($conn = Connection::findBySock($sock))) {
+                        continue;
+                    }
+                    $rec = $conn->getExArg();
+                    /* @var $rec Processor */
+                    self::$_processKey = $rec->key;
+                    $rec->send();
                 }
             } else {
                 // force to close request

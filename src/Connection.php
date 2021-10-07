@@ -361,8 +361,6 @@ class Connection
             $this->flag |= self::FLAG_OPENED;
             $this->addSockRef();
         }
-        $this->outBuf = null;
-        $this->outLen = 0;
         return $this->sock;
     }
 
