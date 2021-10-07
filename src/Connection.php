@@ -324,7 +324,10 @@ class Connection
         } else {
             if ($this->proxyState === 0 && !strncmp($this->conn, 'ssl:', 4)) {
                 Client::debug('enable crypto via proxy tunnel');
-                $this->enableCrypto();
+                if ($this->enableCrypto() !== true) {
+                    self::$_lastError = 'Failed to enable crypto in proxy tunnel';
+                    return false;
+                }
             }
             return true;
         }
@@ -451,6 +454,12 @@ class Connection
     protected function ioEmptyError()
     {
         if ($this->flag & self::FLAG_SELECT) {
+            if (substr($this->conn, 0, 4) === 'ssl:') {
+                $meta = stream_get_meta_data($this->sock);
+                if ($meta['eof'] !== true && $meta['unread_bytes'] === 0) {
+                    return false;
+                }
+            }
             if (!($this->flag & self::FLAG_REUSED) || !$this->openSock(true)) {
                 self::$_lastError = ($this->flag & self::FLAG_NEW) ? 'Fail to connect' : 'Reset by peer';
                 return true;
@@ -503,7 +512,8 @@ class Connection
             $method |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
         }
         stream_set_blocking($this->sock, true);
-        stream_socket_enable_crypto($this->sock, $enable, $method);
+        $res = @stream_socket_enable_crypto($this->sock, $enable, $method);
         stream_set_blocking($this->sock, false);
+        return $res === true;
     }
 }
