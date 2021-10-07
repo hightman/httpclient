@@ -204,12 +204,21 @@ $http->setHeader('authorization', 'Bearer ' . $token);
 $request->setHeader('authorization', 'Bearer ' . $token);
 ```
 
-### Use socks5 proxy
+### Use proxy
 
 ```php
-Connection::useSocks5('127.0.0.1', 1080); // or with username & password
-Connection::useSocks5('127.0.0.1', 1080, 'guest', 'guest'); // or disable it
-Connection::useSocks5(null);
+// use socks5
+Connection::useProxy('socks5://127.0.0.1:1080');
+// use socks5 with username & password
+Connection::useProxy('socks5://user:pass@127.0.0.1:1080');
+// use HTTP proxy
+Connection::useProxy('http://127.0.0.1:8080');
+// use HTTP proxy with basic authentication
+Connection::useProxy('http://user:pass@127.0.0.1:8080');
+// use socks4 proxy
+Connection::useProxy('socks4://127.0.0.1:1080');
+// disable socks
+Connection::useProxy(null);
 ```
 
 

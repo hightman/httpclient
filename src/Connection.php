@@ -27,28 +27,21 @@ class Connection
     const FLAG_REUSED = 0x10;
     const FLAG_SELECT = 0x20;
 
-    /**
-     * @var int state of proxy connection
-     * 1: ask
-     * 2: confirm proxy type
-     * 3: authentication
-     * 4: auth result
-     * 5: send ip & port
-     * 6: ok or refused
-     */
-    public $proxyState = 0;
-
-    /**
-     * @var array|null client context options
-     */
-    public $contextOptions = null;
-
     protected $outBuf, $outLen;
     protected $arg, $sock, $conn, $flag = 0;
     private static $_objs = [];
     private static $_refs = [];
     private static $_lastError;
-    private static $_socks5 = [];
+
+    /**
+     * @var int proxy state
+     */
+    public $proxyState = 0;
+
+    /**
+     * @var array proxy setting
+     */
+    private static $_proxy = null;
 
     /**
      * Set socks5 proxy server
@@ -56,23 +49,60 @@ class Connection
      * @param int $port proxy server port, default to 1080
      * @param string $user authentication username
      * @param string $pass authentication password
+     * @deprecated use `useProxy` instead
      */
     public static function useSocks5($host, $port = 1080, $user = null, $pass = null)
     {
-        if ($host === null) {
-            self::$_socks5 = [];
-        } else {
-            self::$_socks5 = ['conn' => 'tcp://' . $host . ':' . $port];
-            if ($user !== null && $pass !== null) {
-                self::$_socks5['user'] = $user;
-                self::$_socks5['pass'] = $pass;
+        $url = 'socks5://';
+        if ($user !== null && $pass !== null) {
+            $url .= $user . ':' . $pass . '@';
+        }
+        $url .= $host . ':' . $port;
+        self::useProxy($url);
+    }
+
+    /**
+     * Proxy setting
+     *   - socks5 with authentication: socks5://user:pass@127.0.0.1:1080
+     *   - socks4: socks4://127.0.0.1:1080
+     *   - http with authentication: http://user:pass@127.0.0.1:8080
+     *   - http without authentication: 127.0.0.1:1080
+     * @param string $url proxy setting URL
+     */
+    public static function useProxy($url)
+    {
+        self::$_proxy = null;
+        if (!empty($url)) {
+            $pa = parse_url($url);
+            if (!isset($pa['scheme'])) {
+                $pa['scheme'] = 'http';
+            } else {
+                $pa['scheme'] = strtolower($pa['scheme']);
+            }
+            if (!isset($pa['port'])) {
+                $pa['port'] = substr($pa['scheme'], 0, 5) === 'socks' ? 1080 : 80;
+            }
+            if (isset($pa['user']) && !isset($pa['pass'])) {
+                $pa['pass'] = '';
+            }
+            if ($pa['scheme'] === 'tcp' || $pa['scheme'] === 'https') {
+                $pa['scheme'] = 'http';
+            }
+            if ($pa['scheme'] === 'socks') {
+                $pa['scheme'] = isset($pa['user']) ? 'socks5' : 'socks4';
+            }
+            if (in_array($pa['scheme'], ['http', 'socks4', 'socks5'])) {
+                self::$_proxy = $pa;
+                Client::debug('use proxy: ', $url);
+            } else {
+                Client::debug('invalid proxy url: ', $url);
             }
         }
     }
 
     /**
      * Create connection, with built-in pool.
-     * @param string $conn connection string, like `protocal://host:port`.
+     * @param string $conn connection string, like `protocol://host:port`.
      * @param mixed $arg external argument, fetched by `[[getExArg()]]`
      * @return static the connection object, null if it reaches the upper limit of concurrent, or false on failure.
      */
@@ -91,9 +121,6 @@ class Connection
         }
         if ($obj === null && count(self::$_objs[$conn]) < Client::$maxBurst) {
             $obj = new self($conn);
-            if ($arg instanceof Processor) {
-                $obj->contextOptions = $arg->req->contextOptions;
-            }
             self::$_objs[$conn][] = $obj;
             Client::debug('create conn \'', $conn, '\'');
         }
@@ -198,6 +225,7 @@ class Connection
             return $len;
         }
         $n = @fwrite($this->sock, $buf);
+        Client::debug('write data to socket: ', strlen($buf), ' = ', $n === false ? 'false' : $n);
         if ($n === 0 && $this->ioEmptyError()) {
             $n = false;
         }
@@ -238,30 +266,68 @@ class Connection
 
     /**
      * Read data for proxy communication
+     * @return bool
      */
     public function proxyRead()
     {
         $proxyState = $this->proxyState;
         Client::debug('proxy readState: ', $proxyState);
-        if ($proxyState === 2) {
-            $buf = $this->read(2);
-            if ($buf === "\x05\x00") {
-                $this->proxyState = 5;
-            } elseif ($buf === "\x05\x02") {
-                $this->proxyState = 3;
+        if (self::$_proxy['scheme'] === 'http') {
+            while (($line = $this->getLine()) !== null) {
+                if ($line === false) {
+                    return false;
+                }
+                if ($line === '') {
+                    $this->proxyState = 0;
+                    break;
+                }
+                $this->proxyState++;
+                Client::debug('read http proxy line: ', $line);
+                if (!strncmp('HTTP/', $line, 5)) {
+                    $line = trim(substr($line, strpos($line, ' ')));
+                    if (intval($line) !== 200) {
+                        self::$_lastError = 'Proxy communication error: ' . $line;
+                        return false;
+                    }
+                }
             }
-        } elseif ($proxyState === 4) {
-            $buf = $this->read(2);
-            if ($buf === "\x01\x00") {
-                $this->proxyState = 5;
+        } elseif (self::$_proxy['scheme'] === 'socks4') {
+            if ($proxyState === 2) {
+                $buf = $this->read(8);
+                if ($buf === "\x00\x5A") {
+                    $this->proxyState = 0;
+                }
             }
-        } elseif ($proxyState === 6) {
-            $buf = $this->read(10);
-            if (substr($buf, 0, 4) === "\x05\x00\x00\x01") {
-                $this->proxyState = 0;
+        } elseif (self::$_proxy['scheme'] === 'socks5') {
+            if ($proxyState === 2) {
+                $buf = $this->read(2);
+                if ($buf === "\x05\x00") {
+                    $this->proxyState = 5;
+                } elseif ($buf === "\x05\x02") {
+                    $this->proxyState = 3;
+                }
+            } elseif ($proxyState === 4) {
+                $buf = $this->read(2);
+                if ($buf === "\x01\x00") {
+                    $this->proxyState = 5;
+                }
+            } elseif ($proxyState === 6) {
+                $buf = $this->read(10);
+                if (substr($buf, 0, 4) === "\x05\x00\x00\x01") {
+                    $this->proxyState = 0;
+                }
             }
         }
-        return $proxyState !== $this->proxyState;
+        if ($proxyState === $this->proxyState) {
+            self::$_lastError = 'Proxy communication error: state=' . $proxyState;
+            return false;
+        } else {
+            if ($this->proxyState === 0 && !strncmp($this->conn, 'ssl:', 4)) {
+                Client::debug('enable crypto via proxy tunnel');
+                $this->enableCrypto();
+            }
+            return true;
+        }
     }
 
     /**
@@ -271,31 +337,44 @@ class Connection
     public function proxyWrite()
     {
         Client::debug('proxy writeState: ', $this->proxyState);
-        if ($this->proxyState === 1) {
-            $buf = isset(self::$_socks5['user']) ? "\x05\x01\x02" : "\x05\x01\x00";
-            $this->proxyState++;
-            return $this->write($buf);
-        } elseif ($this->proxyState === 3) {
-            if (!isset(self::$_socks5['user'])) {
-                return false;
+        if (self::$_proxy['scheme'] === 'http') {
+            if ($this->proxyState === 1) {
+                $pa = parse_url($this->conn);
+                $buf = 'CONNECT ' . $pa['host'] . ':' . (isset($pa['port']) ? $pa['port'] : 80) . ' HTTP/1.1' . Client::CRLF;
+                $buf .= 'Proxy-Connection: Keep-Alive' . Client::CRLF . 'Content-Length: 0' . Client::CRLF;
+                $this->proxyState++;
+                return $this->write($buf . Client::CRLF);
             }
-            $buf = chr(0x01) . chr(strlen(self::$_socks5['user'])) . self::$_socks5['user']
-                . chr(strlen(self::$_socks5['pass'])) . self::$_socks5['pass'];
-            $this->proxyState++;
-            return $this->write($buf);
-        } elseif ($this->proxyState === 5) {
-            $pa = parse_url($this->conn);
-            $buf = "\x05\x01\x00\x01" . pack('Nn', ip2long($pa['host']), isset($pa['port']) ? $pa['port'] : 80);
-            $this->proxyState++;
-            return $this->write($buf);
-        } else {
-            return false;
+        } elseif (self::$_proxy['scheme'] === 'socks4') {
+            if ($this->proxyState === 1) {
+                $pa = parse_url($this->conn);
+                $buf = "\x04\x01" . pack('nN', isset($pa['port']) ? $pa['port'] : 80, ip2long($pa['host'])) . "\x00";
+                $this->proxyState++;
+                return $this->write($buf);
+            }
+        } elseif (self::$_proxy['scheme'] === 'socks5') {
+            if ($this->proxyState === 1) {
+                $buf = isset(self::$_proxy['user']) ? "\x05\x01\x02" : "\x05\x01\x00";
+                $this->proxyState++;
+                return $this->write($buf);
+            } elseif ($this->proxyState === 3) {
+                $buf = chr(0x01) . chr(strlen(self::$_proxy['user'])) . self::$_proxy['user']
+                    . chr(strlen(self::$_proxy['pass'])) . self::$_proxy['pass'];
+                $this->proxyState++;
+                return $this->write($buf);
+            } elseif ($this->proxyState === 5) {
+                $pa = parse_url($this->conn);
+                $buf = "\x05\x01\x00\x01" . pack('Nn', ip2long($pa['host']), isset($pa['port']) ? $pa['port'] : 80);
+                $this->proxyState++;
+                return $this->write($buf);
+            }
         }
+        return false;
     }
 
     /**
      * Get the connection socket
-     * @return resource the socket
+     * @return resource|false the socket
      */
     public function getSock()
     {
@@ -328,29 +407,31 @@ class Connection
         $this->delSockRef();
         $this->flag |= self::FLAG_NEW;
         if ($repeat === true) {
+            @fclose($this->sock);
             $this->flag |= self::FLAG_NEW2;
         }
-        // async-connect
+        // context options
+        $useProxy = self::$_proxy !== null;
         $ctx = ['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]];
-        if (isset(self::$_socks5['conn']) && $this->contextOptions === null) {
-            $this->proxyState = 1;
-            $conn = self::$_socks5['conn'];
-        } else {
-            $this->proxyState = 0;
-            $conn = $this->conn;
-            if (!strncmp($conn, 'ssl:', 4) && $this->arg instanceof Processor) {
-                $ctx['ssl']['peer_name'] = $this->arg->req->getUrlParam('host');
+        if ($this->arg instanceof Processor) {
+            $req = $this->arg->req;
+            if ($req->disableProxy === true) {
+                $useProxy = false;
             }
-        }
-        if (is_array($this->contextOptions)) {
-            foreach ($this->contextOptions as $key => $value) {
-                if (isset($ctx[$key])) {
-                    $ctx[$key] = array_merge($ctx[$key], $value);
-                } else {
-                    $ctx[$key] = $value;
+            if (is_array($req->contextOptions)) {
+                foreach ($req->contextOptions as $key => $value) {
+                    if (isset($ctx[$key])) {
+                        $ctx[$key] = array_merge($ctx[$key], $value);
+                    } else {
+                        $ctx[$key] = $value;
+                    }
                 }
             }
+            if (!strncmp($this->conn, 'ssl:', 4)) {
+                $ctx['ssl']['peer_name'] = $req->getUrlParam('host');
+            }
         }
+        $conn = $useProxy ? 'tcp://' . self::$_proxy['host'] . ':' . self::$_proxy['port'] : $this->conn;
         $this->sock = @stream_socket_client($conn, $errno, $error, 10, STREAM_CLIENT_ASYNC_CONNECT, stream_context_create($ctx));
         if ($this->sock === false) {
             Client::debug($repeat ? 're' : '', 'open \'', $conn, '\' failed: ', $error);
@@ -360,6 +441,9 @@ class Connection
             stream_set_blocking($this->sock, false);
             $this->flag |= self::FLAG_OPENED;
             $this->addSockRef();
+            if ($useProxy === true) {
+                $this->proxyState = 1;
+            }
         }
         return $this->sock;
     }
@@ -404,5 +488,22 @@ class Connection
     {
         $this->conn = $conn;
         $this->sock = false;
+    }
+
+    private function enableCrypto($enable = true)
+    {
+        $method = STREAM_CRYPTO_METHOD_TLS_CLIENT;
+        if (defined('STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT')) {
+            $method |= STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT;
+        }
+        if (defined('STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT')) {
+            $method |= STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
+        }
+        if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) {
+            $method |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+        }
+        stream_set_blocking($this->sock, true);
+        stream_socket_enable_crypto($this->sock, $enable, $method);
+        stream_set_blocking($this->sock, false);
     }
 }

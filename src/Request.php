@@ -20,10 +20,15 @@ class Request
     use HeaderTrait;
 
     /**
-     * @var array context options of client connection
+     * @var array context options of connection, now supports: ssl,socket
      * @see https://www.php.net/manual/en/context.php
      */
     public $contextOptions;
+
+    /**
+     * @var bool disable proxy for this request
+     */
+    public $disableProxy = false;
 
     private $_url, $_urlParams, $_rawUrl, $_body;
     private $_method = 'GET';

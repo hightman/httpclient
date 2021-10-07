@@ -102,12 +102,14 @@ function test_cb($res, $req, $key)
     }
 }
 
+$time9 = microtime(true);
 $http->setParser('test_cb');
 $responses = $http->mget([
     'baidu' => 'http://www.baidu.com',
     'sina' => 'http://news.sina.com.cn',
     'qq' => 'http://www.qq.com',
 ]);
+echo '   >> total time cost: ', round(microtime(true) - $time9, 4), 's', PHP_EOL;
 
 echo '10. process multiple various requests in parallel ... ', PHP_EOL;
 
