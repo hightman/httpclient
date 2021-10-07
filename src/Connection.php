@@ -349,8 +349,12 @@ class Connection
                 $pa = parse_url($this->conn);
                 $buf = 'CONNECT ' . $pa['host'] . ':' . (isset($pa['port']) ? $pa['port'] : 80) . ' HTTP/1.1' . Client::CRLF;
                 $buf .= 'Proxy-Connection: Keep-Alive' . Client::CRLF . 'Content-Length: 0' . Client::CRLF;
+                if (isset(self::$_proxy['user'])) {
+                    $buf .= 'Proxy-Authorization: Basic ' . base64_encode(self::$_proxy['user'] . ':' . self::$_proxy['pass']) . Client::CRLF;
+                }
+                $buf .= Client::CRLF;
                 $this->proxyState++;
-                return $this->write($buf . Client::CRLF);
+                return $this->write($buf);
             }
         } elseif (self::$_proxy['scheme'] === 'socks4') {
             if ($this->proxyState === 1) {
