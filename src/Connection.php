@@ -271,7 +271,7 @@ class Connection
     public function proxyRead()
     {
         $proxyState = $this->proxyState;
-        Client::debug('proxy readState: ', $proxyState);
+        Client::debug(self::$_proxy['scheme'], ' proxy readState: ', $proxyState);
         if (self::$_proxy['scheme'] === 'http') {
             while (($line = $this->getLine()) !== null) {
                 if ($line === false) {
@@ -294,7 +294,7 @@ class Connection
         } elseif (self::$_proxy['scheme'] === 'socks4') {
             if ($proxyState === 2) {
                 $buf = $this->read(8);
-                if ($buf === "\x00\x5A") {
+                if (substr($buf, 0, 2) === "\x00\x5A") {
                     $this->proxyState = 0;
                 }
             }
@@ -319,7 +319,11 @@ class Connection
             }
         }
         if ($proxyState === $this->proxyState) {
-            self::$_lastError = 'Proxy communication error: state=' . $proxyState;
+            self::$_lastError = 'Proxy read error: state=' . $proxyState;
+            if (isset($buf)) {
+                $unpack = unpack('H*', $buf);
+                self::$_lastError .= ', buf=' . $unpack[1];
+            }
             return false;
         } else {
             if ($this->proxyState === 0 && !strncmp($this->conn, 'ssl:', 4)) {
@@ -339,7 +343,7 @@ class Connection
      */
     public function proxyWrite()
     {
-        Client::debug('proxy writeState: ', $this->proxyState);
+        Client::debug(self::$_proxy['scheme'], ' proxy writeState: ', $this->proxyState);
         if (self::$_proxy['scheme'] === 'http') {
             if ($this->proxyState === 1) {
                 $pa = parse_url($this->conn);
