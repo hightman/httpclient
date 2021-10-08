@@ -348,7 +348,8 @@ class Connection
             if ($this->proxyState === 1) {
                 $pa = parse_url($this->conn);
                 $buf = 'CONNECT ' . $pa['host'] . ':' . (isset($pa['port']) ? $pa['port'] : 80) . ' HTTP/1.1' . Client::CRLF;
-                $buf .= 'Proxy-Connection: Keep-Alive' . Client::CRLF . 'Content-Length: 0' . Client::CRLF;
+                $buf .= 'Host: ' . $pa['host'] . Client::CRLF . 'Content-Length: 0' . Client::CRLF;
+                $buf .= 'Proxy-Connection: Keep-Alive' . Client::CRLF;
                 if (isset(self::$_proxy['user'])) {
                     $buf .= 'Proxy-Authorization: Basic ' . base64_encode(self::$_proxy['user'] . ':' . self::$_proxy['pass']) . Client::CRLF;
                 }
